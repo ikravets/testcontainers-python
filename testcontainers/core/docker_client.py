@@ -14,6 +14,7 @@ import os
 import urllib
 import docker
 from docker.models.containers import Container
+from docker.transport import UnixHTTPAdapter, NpipeHTTPAdapter
 from testcontainers.core.utils import inside_container
 from testcontainers.core.utils import default_gateway_ip
 
@@ -72,11 +73,13 @@ class DockerClient(object):
 
         except ValueError:
             return None
-        if 'http' in url.scheme or 'tcp' in url.scheme:
-            return url.hostname
-        if 'unix' in url.scheme or 'npipe' in url.scheme:
+        adapter = self.client.api.get_adapter(self.client.api.base_url)
+        if isinstance(adapter, UnixHTTPAdapter) or isinstance(adapter, NpipeHTTPAdapter) or \
+                'unix' in url.scheme or 'npipe' in url.scheme:
             if inside_container():
                 ip_address = default_gateway_ip()
                 if ip_address:
                     return ip_address
+        if 'http' in url.scheme or 'tcp' in url.scheme:
+            return url.hostname
         return "localhost"
